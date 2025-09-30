@@ -13,36 +13,38 @@ export default function Home() {
   const toggleMeditation = useMutation(api.meditations.toggleMeditation);
 
   // State for selected month/year for heatmap view
-  // Initialize with current month and year
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()) // 0-11
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
-  // Get today's date in YYYY-MM-DD format for comparison
-  const today = new Date().toISOString().split('T')[0]
+  // State for celebration animation
+  const [celebrating, setCelebrating] = useState<'person1' | 'person2' | null>(null)
 
-  // Find today's entry (if it exists)
+  // Get today's date in YYYY-MM-DD format
+  const today = new Date().toISOString().split('T')[0]
   const todayEntry = entries.find(entry => entry.date === today)
 
-  // Function to handle when someone clicks "I meditated today"
+  // Handle meditation toggle with celebration effect
   const handleMeditation = async (person: 'person1' | 'person2') => {
-    // Call Convex mutation to toggle meditation in database
-    // This will automatically sync across all devices!
+    const wasCompleted = todayEntry?.[person]
+
     await toggleMeditation({
       date: today,
       person: person
     });
+
+    // Show celebration animation when marking as complete (not when unchecking)
+    if (!wasCompleted) {
+      setCelebrating(person)
+      setTimeout(() => setCelebrating(null), 1000)
+    }
   }
 
   // Generate heatmap data for selected month
   const generateMonthHeatmap = (person: 'person1' | 'person2') => {
-    // Use selected month and year instead of current
     const year = selectedYear
-    const month = selectedMonth // 0-11
-
-    // Get number of days in selected month
+    const month = selectedMonth
     const daysInMonth = new Date(year, month + 1, 0).getDate()
 
-    // Create array of all days in selected month
     const days = []
     for (let day = 1; day <= daysInMonth; day++) {
       const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -56,21 +58,17 @@ export default function Home() {
     return days
   }
 
-  // Function to change selected month
+  // Change selected month
   const changeMonth = (direction: 'prev' | 'next') => {
     if (direction === 'prev') {
-      // Go to previous month
       if (selectedMonth === 0) {
-        // If January, go to December of previous year
         setSelectedMonth(11)
         setSelectedYear(selectedYear - 1)
       } else {
         setSelectedMonth(selectedMonth - 1)
       }
     } else {
-      // Go to next month
       if (selectedMonth === 11) {
-        // If December, go to January of next year
         setSelectedMonth(0)
         setSelectedYear(selectedYear + 1)
       } else {
@@ -79,31 +77,25 @@ export default function Home() {
     }
   }
 
-  // Get month name for display
+  // Get month name
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December']
   const selectedMonthName = monthNames[selectedMonth]
 
-  // Calculate current streak for a person
-  // Streak = consecutive days of meditation up to today
+  // Calculate streak
   const calculateStreak = (person: 'person1' | 'person2') => {
     let streak = 0
     const today = new Date()
 
-    // Start from today and go backwards
     for (let i = 0; i < 365; i++) {
       const checkDate = new Date(today)
-      checkDate.setDate(today.getDate() - i) // Go back i days
+      checkDate.setDate(today.getDate() - i)
       const dateString = checkDate.toISOString().split('T')[0]
-
-      // Find entry for this date
       const entry = entries.find(e => e.date === dateString)
 
       if (entry && entry[person]) {
-        // Person meditated on this day
         streak++
       } else {
-        // Person didn't meditate - streak is broken
         break
       }
     }
@@ -111,133 +103,157 @@ export default function Home() {
     return streak
   }
 
-  // Get streak values for both people
   const michalStreak = calculateStreak('person1')
   const magdaStreak = calculateStreak('person2')
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">
-          🧘‍♀️ Meditation Tracker
-        </h1>
-        <p className="text-center text-gray-600 mb-8">
-          Track your daily meditation practice together
-        </p>
+    <main className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 p-4 sm:p-8">
+      <div className="max-w-5xl mx-auto">
+        {/* Header - Ali Abdaal inspired */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl sm:text-6xl font-bold mb-3 bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+            Meditation Journey
+          </h1>
+          <p className="text-gray-600 text-lg">
+            Building mindfulness, one breath at a time
+          </p>
+        </div>
 
-        {/* Today's Meditation Buttons */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800">Today</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Michał's Button */}
-            <div className="relative">
+        {/* Today's Meditation - Enhanced cards */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-orange-100 p-8 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-semibold text-gray-800">Today's Practice</h2>
+            <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Michał's Card */}
+            <div className="relative group">
               <button
                 onClick={() => handleMeditation('person1')}
-                className={`w-full p-6 rounded-lg font-semibold text-lg transition-all ${
+                className={`w-full p-8 rounded-2xl font-medium text-lg transition-all duration-300 relative overflow-hidden ${
                   todayEntry?.person1
-                    ? 'bg-green-500 text-white shadow-lg scale-105'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-2xl scale-[1.02] hover:scale-[1.03]'
+                    : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 hover:from-orange-50 hover:to-amber-50 hover:shadow-lg border-2 border-gray-200 hover:border-orange-200'
                 }`}
               >
-                <div className="text-3xl mb-2">🧘‍♂️</div>
-                Michał
-                <div className="text-sm mt-1">
-                  {todayEntry?.person1 ? '✓ Meditated today!' : 'Click when done'}
+                {/* Celebration sparkles */}
+                {celebrating === 'person1' && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="text-6xl animate-ping">✨</span>
+                  </div>
+                )}
+
+                <div className="text-5xl mb-3">🧘‍♂️</div>
+                <div className="text-2xl font-bold mb-2">Michał</div>
+                <div className="text-sm opacity-90">
+                  {todayEntry?.person1 ? '✓ Practice complete!' : 'Tap to log session'}
                 </div>
               </button>
-              {/* Streak Display - Duolingo style */}
-              <div className="mt-3 flex items-center justify-center gap-2">
-                <div className={`text-2xl ${michalStreak > 0 ? 'animate-pulse' : ''}`}>
+
+              {/* Streak Display */}
+              <div className="mt-4 flex items-center justify-center gap-3 bg-gradient-to-r from-orange-100 to-amber-100 rounded-xl p-3">
+                <div className={`text-3xl ${michalStreak > 0 ? 'animate-pulse' : 'opacity-50'}`}>
                   🔥
                 </div>
                 <div className="flex flex-col">
-                  <span className={`text-2xl font-bold ${
-                    michalStreak > 0 ? 'text-orange-500' : 'text-gray-400'
+                  <span className={`text-3xl font-bold ${
+                    michalStreak > 0 ? 'text-orange-600' : 'text-gray-400'
                   }`}>
                     {michalStreak}
                   </span>
-                  <span className="text-xs text-gray-500 -mt-1">day streak</span>
+                  <span className="text-xs text-gray-600 font-medium -mt-1">
+                    day streak
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Magda's Button */}
-            <div className="relative">
+            {/* Magda's Card */}
+            <div className="relative group">
               <button
                 onClick={() => handleMeditation('person2')}
-                className={`w-full p-6 rounded-lg font-semibold text-lg transition-all ${
+                className={`w-full p-8 rounded-2xl font-medium text-lg transition-all duration-300 relative overflow-hidden ${
                   todayEntry?.person2
-                    ? 'bg-green-500 text-white shadow-lg scale-105'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-2xl scale-[1.02] hover:scale-[1.03]'
+                    : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 hover:from-purple-50 hover:to-pink-50 hover:shadow-lg border-2 border-gray-200 hover:border-purple-200'
                 }`}
               >
-                <div className="text-3xl mb-2">🧘‍♀️</div>
-                Magda
-                <div className="text-sm mt-1">
-                  {todayEntry?.person2 ? '✓ Meditated today!' : 'Click when done'}
+                {/* Celebration sparkles */}
+                {celebrating === 'person2' && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="text-6xl animate-ping">✨</span>
+                  </div>
+                )}
+
+                <div className="text-5xl mb-3">🧘‍♀️</div>
+                <div className="text-2xl font-bold mb-2">Magda</div>
+                <div className="text-sm opacity-90">
+                  {todayEntry?.person2 ? '✓ Practice complete!' : 'Tap to log session'}
                 </div>
               </button>
-              {/* Streak Display - Duolingo style */}
-              <div className="mt-3 flex items-center justify-center gap-2">
-                <div className={`text-2xl ${magdaStreak > 0 ? 'animate-pulse' : ''}`}>
+
+              {/* Streak Display */}
+              <div className="mt-4 flex items-center justify-center gap-3 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-3">
+                <div className={`text-3xl ${magdaStreak > 0 ? 'animate-pulse' : 'opacity-50'}`}>
                   🔥
                 </div>
                 <div className="flex flex-col">
-                  <span className={`text-2xl font-bold ${
-                    magdaStreak > 0 ? 'text-orange-500' : 'text-gray-400'
+                  <span className={`text-3xl font-bold ${
+                    magdaStreak > 0 ? 'text-purple-600' : 'text-gray-400'
                   }`}>
                     {magdaStreak}
                   </span>
-                  <span className="text-xs text-gray-500 -mt-1">day streak</span>
+                  <span className="text-xs text-gray-600 font-medium -mt-1">
+                    day streak
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Month Selector */}
-        <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
+        {/* Month Selector - Cleaner design */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-orange-100 p-5 mb-8">
           <div className="flex items-center justify-between max-w-md mx-auto">
-            {/* Previous Month Button */}
             <button
               onClick={() => changeMonth('prev')}
-              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+              className="p-3 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-600 transition-all hover:scale-110"
               title="Previous month"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
 
-            {/* Current Month Display */}
             <div className="text-xl font-semibold text-gray-800">
               {selectedMonthName} {selectedYear}
             </div>
 
-            {/* Next Month Button */}
             <button
               onClick={() => changeMonth('next')}
-              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+              className="p-3 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-600 transition-all hover:scale-110"
               title="Next month"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </div>
         </div>
 
-        {/* Monthly Heatmaps */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Monthly Heatmaps - Refined cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Michał's Heatmap */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">
-                🧘‍♂️ Michał
-              </h3>
-              {/* Stats counter displayed inline */}
-              <div className="text-2xl font-bold text-purple-600">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-orange-100 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🧘‍♂️</span>
+                <h3 className="text-xl font-semibold text-gray-800">Michał</h3>
+              </div>
+              <div className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
                 {generateMonthHeatmap('person1').filter(d => d.meditated).length}
               </div>
             </div>
@@ -245,10 +261,10 @@ export default function Home() {
               {generateMonthHeatmap('person1').map(({ day, meditated }) => (
                 <div
                   key={day}
-                  className={`aspect-square rounded flex items-center justify-center text-sm font-medium ${
+                  className={`aspect-square rounded-lg flex items-center justify-center text-sm font-semibold transition-all ${
                     meditated
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-100 text-gray-400'
+                      ? 'bg-gradient-to-br from-orange-400 to-amber-400 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                   }`}
                   title={`Day ${day}`}
                 >
@@ -259,13 +275,13 @@ export default function Home() {
           </div>
 
           {/* Magda's Heatmap */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">
-                🧘‍♀️ Magda
-              </h3>
-              {/* Stats counter displayed inline */}
-              <div className="text-2xl font-bold text-blue-600">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-purple-100 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🧘‍♀️</span>
+                <h3 className="text-xl font-semibold text-gray-800">Magda</h3>
+              </div>
+              <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 {generateMonthHeatmap('person2').filter(d => d.meditated).length}
               </div>
             </div>
@@ -273,10 +289,10 @@ export default function Home() {
               {generateMonthHeatmap('person2').map(({ day, meditated }) => (
                 <div
                   key={day}
-                  className={`aspect-square rounded flex items-center justify-center text-sm font-medium ${
+                  className={`aspect-square rounded-lg flex items-center justify-center text-sm font-semibold transition-all ${
                     meditated
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-100 text-gray-400'
+                      ? 'bg-gradient-to-br from-purple-400 to-pink-400 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                   }`}
                   title={`Day ${day}`}
                 >
@@ -285,6 +301,11 @@ export default function Home() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-12 text-center text-sm text-gray-500">
+          <p>Synced in real-time across all devices ✨</p>
         </div>
       </div>
     </main>
