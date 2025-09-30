@@ -109,16 +109,6 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 p-4 sm:p-8">
       <div className="max-w-5xl mx-auto">
-        {/* Header - Ali Abdaal inspired */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl sm:text-6xl font-bold mb-3 bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-            Meditation Journey
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Building mindfulness, one breath at a time
-          </p>
-        </div>
-
         {/* Today's Meditation - Enhanced cards */}
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-orange-100 p-8 mb-8">
           <div className="flex items-center justify-between mb-6">
