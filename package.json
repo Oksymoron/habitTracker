@@ -4,8 +4,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
-    "build": "convex deploy --cmd 'npm run build:next'",
-    "build:next": "next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },

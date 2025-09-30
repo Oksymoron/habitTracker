@@ -36,4 +36,4 @@ next-env.d.ts
 
 # convex
 .env.local
-convex/_generated
+# convex/_generated - commenting out to commit generated files for Vercel
