@@ -4,9 +4,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run convex:codegen && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "convex:codegen": "convex codegen --cmd 'node -e \"console.log(\\\"Codegen complete\\\")\"'"
   },
   "keywords": [],
   "author": "",
