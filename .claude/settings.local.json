@@ -15,7 +15,10 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "Read(//c/Users/oxymoron/Downloads/PWA/**)",
-      "Read(//c/Users/oxymoron/Downloads/vecteezy_set-of-greek-ornaments-for-your-ancient-art-projects-decoration-in-your-publications-or-greek-topics-in-your-designs_122826/**)"
+      "Read(//c/Users/oxymoron/Downloads/vecteezy_set-of-greek-ornaments-for-your-ancient-art-projects-decoration-in-your-publications-or-greek-topics-in-your-designs_122826/**)",
+      "Read(//c/Users/oxymoron/Downloads/**)",
+      "Bash(npm run dev:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []
