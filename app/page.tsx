@@ -1,80 +1,94 @@
-'use client' // This makes it a Client Component - needed because we use React hooks
+'use client'
 
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 
 export default function Home() {
-  // useQuery hook fetches data from Convex database
-  // Automatically updates when database changes (real-time!)
   const entries = useQuery(api.meditations.getAll) ?? [];
 
-  // Register service worker for PWA functionality
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("/sw.js").then(
-          (registration) => {
-            console.log("[PWA] Service Worker registered:", registration);
-          },
-          (error) => {
-            console.log("[PWA] Service Worker registration failed:", error);
-          }
+          (registration) => console.log("[PWA] Service Worker registered:", registration),
+          (error) => console.log("[PWA] Service Worker registration failed:", error)
         );
       });
     }
   }, []);
 
-  // useMutation hook creates a function to modify database
   const toggleMeditation = useMutation(api.meditations.toggleMeditation);
 
-  // State for selected month/year for heatmap view
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-
-  // State for celebration animation
   const [celebrating, setCelebrating] = useState<'person1' | 'person2' | null>(null)
 
-  // Get today's date in YYYY-MM-DD format
+  // Collection of Stoic and Cynic philosophy quotes
+  const quotes = [
+    // Marcus Aurelius - Meditations
+    { text: "You have power over your mind — not outside events. Realize this, and you will find strength.", author: "Marcus Aurelius" },
+    { text: "The impediment to action advances action. What stands in the way becomes the way.", author: "Marcus Aurelius" },
+    { text: "Dwell on the beauty of life. Watch the stars, and see yourself running with them.", author: "Marcus Aurelius" },
+    { text: "Waste no more time arguing about what a good man should be. Be one.", author: "Marcus Aurelius" },
+    { text: "The best revenge is to be unlike him who performed the injury.", author: "Marcus Aurelius" },
+    { text: "Very little is needed to make a happy life; it is all within yourself, in your way of thinking.", author: "Marcus Aurelius" },
+    { text: "If you are distressed by anything external, the pain is not due to the thing itself, but to your estimate of it.", author: "Marcus Aurelius" },
+    { text: "When you arise in the morning, think of what a precious privilege it is to be alive.", author: "Marcus Aurelius" },
+    { text: "Confine yourself to the present.", author: "Marcus Aurelius" },
+    { text: "Everything we hear is an opinion, not a fact. Everything we see is a perspective, not the truth.", author: "Marcus Aurelius" },
+
+    // Seneca - Letters and Essays
+    { text: "We suffer more often in imagination than in reality.", author: "Seneca" },
+    { text: "Luck is what happens when preparation meets opportunity.", author: "Seneca" },
+    { text: "It is not the man who has too little, but the man who craves more, that is poor.", author: "Seneca" },
+    { text: "Difficulties strengthen the mind, as labor does the body.", author: "Seneca" },
+    { text: "As long as you live, keep learning how to live.", author: "Seneca" },
+    { text: "While we wait for life, life passes.", author: "Seneca" },
+    { text: "True happiness is to enjoy the present, without anxious dependence upon the future.", author: "Seneca" },
+    { text: "He who is brave is free.", author: "Seneca" },
+    { text: "Life is long if you know how to use it.", author: "Seneca" },
+    { text: "Begin at once to live, and count each separate day as a separate life.", author: "Seneca" },
+
+    // Diogenes of Sinope - Cynic wisdom
+    { text: "The foundation of every state is the education of its youth.", author: "Diogenes" },
+    { text: "I am a citizen of the world.", author: "Diogenes" },
+    { text: "The sun too penetrates into privies, but is not polluted by them.", author: "Diogenes" },
+    { text: "Why not whip the teacher when the pupil misbehaves?", author: "Diogenes" },
+    { text: "It is the privilege of the gods to want nothing, and of godlike men to want little.", author: "Diogenes" },
+    { text: "I am looking for an honest man.", author: "Diogenes" },
+    { text: "The mob is the mother of tyrants.", author: "Diogenes" },
+    { text: "Dogs and philosophers do the greatest good and get the fewest rewards.", author: "Diogenes" }
+  ]
+
+  // Select a random quote on component mount (happens once per page load)
+  const [randomQuote] = useState(() => quotes[Math.floor(Math.random() * quotes.length)])
+
   const today = new Date().toISOString().split('T')[0]
   const todayEntry = entries.find(entry => entry.date === today)
 
-  // Handle meditation toggle with celebration effect
   const handleMeditation = async (person: 'person1' | 'person2') => {
     const wasCompleted = todayEntry?.[person]
-
-    await toggleMeditation({
-      date: today,
-      person: person
-    });
-
-    // Show celebration animation when marking as complete (not when unchecking)
+    await toggleMeditation({ date: today, person: person });
     if (!wasCompleted) {
       setCelebrating(person)
       setTimeout(() => setCelebrating(null), 1000)
     }
   }
 
-  // Generate heatmap data for selected month
   const generateMonthHeatmap = (person: 'person1' | 'person2') => {
     const year = selectedYear
     const month = selectedMonth
     const daysInMonth = new Date(year, month + 1, 0).getDate()
-
     const days = []
     for (let day = 1; day <= daysInMonth; day++) {
       const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
       const entry = entries.find(e => e.date === date)
-      days.push({
-        day,
-        meditated: entry ? entry[person] : false
-      })
+      days.push({ day, meditated: entry ? entry[person] : false })
     }
-
     return days
   }
 
-  // Change selected month
   const changeMonth = (direction: 'prev' | 'next') => {
     if (direction === 'prev') {
       if (selectedMonth === 0) {
@@ -93,29 +107,24 @@ export default function Home() {
     }
   }
 
-  // Get month name
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December']
   const selectedMonthName = monthNames[selectedMonth]
 
-  // Calculate streak
   const calculateStreak = (person: 'person1' | 'person2') => {
     let streak = 0
     const today = new Date()
-
     for (let i = 0; i < 365; i++) {
       const checkDate = new Date(today)
       checkDate.setDate(today.getDate() - i)
       const dateString = checkDate.toISOString().split('T')[0]
       const entry = entries.find(e => e.date === dateString)
-
       if (entry && entry[person]) {
         streak++
       } else {
         break
       }
     }
-
     return streak
   }
 
@@ -123,195 +132,254 @@ export default function Home() {
   const magdaStreak = calculateStreak('person2')
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 p-3 sm:p-8">
-      <div className="max-w-5xl mx-auto">
-        {/* Today's Meditation - Enhanced cards */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-xl border border-orange-100 p-4 sm:p-8 mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-2">
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">Today's Practice</h2>
-            <div className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 sm:px-3 py-1 rounded-full">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-            </div>
+    <main className="min-h-screen relative overflow-hidden">
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+        body {
+          font-family: 'Crimson Text', serif;
+        }
+        h1, h2, h3, h4 {
+          font-family: 'Cinzel', serif;
+        }
+      `}</style>
+
+      {/* Athens Background Image */}
+      <div className="fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url(/images/athens-background.png)',
+            backgroundPosition: 'center 30%'
+          }}
+        ></div>
+        {/* Dark overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/50"></div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 min-h-screen p-4 pb-20">
+        <div className="max-w-2xl mx-auto">
+
+          {/* Header */}
+          <div className="text-center mb-6 pt-4">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 tracking-wide drop-shadow-lg">
+              MEDITATIONS
+            </h1>
+            <p className="text-xs sm:text-sm text-white/90 italic max-w-md mx-auto leading-relaxed drop-shadow">
+              "{randomQuote.text}"<br className="sm:hidden"/> — {randomQuote.author}
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {/* Michał's Card */}
-            <div className="relative group">
+          {/* Today's Practice Cards */}
+          <div className="space-y-4 mb-6">
+            {/* Michał */}
+            <div className="relative">
               <button
                 onClick={() => handleMeditation('person1')}
-                className={`w-full p-6 sm:p-8 rounded-xl sm:rounded-2xl font-medium text-base sm:text-lg transition-all duration-300 relative overflow-hidden ${
+                className={`w-full p-6 rounded-none backdrop-blur-sm border-4 transition-all duration-300 relative overflow-hidden ${
                   todayEntry?.person1
-                    ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-2xl scale-[1.02] active:scale-100'
-                    : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 active:from-orange-50 active:to-amber-50 active:shadow-lg border-2 border-gray-200 active:border-orange-200'
+                    ? 'bg-amber-800/80 border-amber-600 shadow-2xl'
+                    : 'bg-stone-800/60 border-stone-600 hover:bg-stone-700/60 active:bg-stone-600/60'
                 }`}
+                style={{
+                  boxShadow: todayEntry?.person1 ? '0 8px 32px rgba(217, 119, 6, 0.3), inset 0 2px 4px rgba(255,255,255,0.1)' : '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)'
+                }}
               >
-                {/* Celebration sparkles */}
                 {celebrating === 'person1' && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-5xl sm:text-6xl animate-ping">✨</span>
+                    <span className="text-6xl animate-ping">⚡</span>
                   </div>
                 )}
 
-                <div className="text-4xl sm:text-5xl mb-2 sm:mb-3">🧘‍♂️</div>
-                <div className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">Michał</div>
-                <div className="text-xs sm:text-sm opacity-90">
-                  {todayEntry?.person1 ? '✓ Practice complete!' : 'Tap to log session'}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-4xl">🏛️</span>
+                    <div className="text-left">
+                      <div className={`text-2xl font-bold tracking-wide ${
+                        todayEntry?.person1 ? 'text-white' : 'text-white drop-shadow'
+                      }`}>
+                        MICHAŁ
+                      </div>
+                      <div className={`text-xs italic ${
+                        todayEntry?.person1 ? 'text-amber-100' : 'text-white/80'
+                      }`}>
+                        {todayEntry?.person1 ? 'Virtue achieved' : 'Begin practice'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Streak */}
+                  <div className="flex items-center gap-2">
+                    <div className={`text-2xl ${michalStreak > 0 ? '' : 'opacity-40'}`}>🔥</div>
+                    <div className="text-right">
+                      <div className={`text-2xl font-bold ${
+                        todayEntry?.person1 ? 'text-white' : 'text-white drop-shadow'
+                      }`}>
+                        {michalStreak}
+                      </div>
+                      <div className={`text-[9px] uppercase tracking-wide ${
+                        todayEntry?.person1 ? 'text-amber-100' : 'text-white/70'
+                      }`}>
+                        days
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </button>
-
-              {/* Streak Display */}
-              <div className="mt-3 sm:mt-4 flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-orange-100 to-amber-100 rounded-lg sm:rounded-xl p-2 sm:p-3">
-                <div className={`text-2xl sm:text-3xl ${michalStreak > 0 ? 'animate-pulse' : 'opacity-50'}`}>
-                  🔥
-                </div>
-                <div className="flex flex-col">
-                  <span className={`text-2xl sm:text-3xl font-bold ${
-                    michalStreak > 0 ? 'text-orange-600' : 'text-gray-400'
-                  }`}>
-                    {michalStreak}
-                  </span>
-                  <span className="text-[10px] sm:text-xs text-gray-600 font-medium -mt-1">
-                    day streak
-                  </span>
-                </div>
-              </div>
             </div>
 
-            {/* Magda's Card */}
-            <div className="relative group">
+            {/* Magda */}
+            <div className="relative">
               <button
                 onClick={() => handleMeditation('person2')}
-                className={`w-full p-6 sm:p-8 rounded-xl sm:rounded-2xl font-medium text-base sm:text-lg transition-all duration-300 relative overflow-hidden ${
+                className={`w-full p-6 rounded-none backdrop-blur-sm border-4 transition-all duration-300 relative overflow-hidden ${
                   todayEntry?.person2
-                    ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-2xl scale-[1.02] active:scale-100'
-                    : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 active:from-purple-50 active:to-pink-50 active:shadow-lg border-2 border-gray-200 active:border-purple-200'
+                    ? 'bg-rose-900/80 border-rose-700 shadow-2xl'
+                    : 'bg-stone-800/60 border-stone-600 hover:bg-stone-700/60 active:bg-stone-600/60'
                 }`}
+                style={{
+                  boxShadow: todayEntry?.person2 ? '0 8px 32px rgba(190, 18, 60, 0.3), inset 0 2px 4px rgba(255,255,255,0.1)' : '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)'
+                }}
               >
-                {/* Celebration sparkles */}
                 {celebrating === 'person2' && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-5xl sm:text-6xl animate-ping">✨</span>
+                    <span className="text-6xl animate-ping">⚡</span>
                   </div>
                 )}
 
-                <div className="text-4xl sm:text-5xl mb-2 sm:mb-3">🧘‍♀️</div>
-                <div className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">Magda</div>
-                <div className="text-xs sm:text-sm opacity-90">
-                  {todayEntry?.person2 ? '✓ Practice complete!' : 'Tap to log session'}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-4xl">🏺</span>
+                    <div className="text-left">
+                      <div className={`text-2xl font-bold tracking-wide ${
+                        todayEntry?.person2 ? 'text-white' : 'text-white drop-shadow'
+                      }`}>
+                        MAGDA
+                      </div>
+                      <div className={`text-xs italic ${
+                        todayEntry?.person2 ? 'text-rose-100' : 'text-white/80'
+                      }`}>
+                        {todayEntry?.person2 ? 'Virtue achieved' : 'Begin practice'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Streak */}
+                  <div className="flex items-center gap-2">
+                    <div className={`text-2xl ${magdaStreak > 0 ? '' : 'opacity-40'}`}>🔥</div>
+                    <div className="text-right">
+                      <div className={`text-2xl font-bold ${
+                        todayEntry?.person2 ? 'text-white' : 'text-white drop-shadow'
+                      }`}>
+                        {magdaStreak}
+                      </div>
+                      <div className={`text-[9px] uppercase tracking-wide ${
+                        todayEntry?.person2 ? 'text-rose-100' : 'text-white/70'
+                      }`}>
+                        days
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </button>
-
-              {/* Streak Display */}
-              <div className="mt-3 sm:mt-4 flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg sm:rounded-xl p-2 sm:p-3">
-                <div className={`text-2xl sm:text-3xl ${magdaStreak > 0 ? 'animate-pulse' : 'opacity-50'}`}>
-                  🔥
-                </div>
-                <div className="flex flex-col">
-                  <span className={`text-2xl sm:text-3xl font-bold ${
-                    magdaStreak > 0 ? 'text-purple-600' : 'text-gray-400'
-                  }`}>
-                    {magdaStreak}
-                  </span>
-                  <span className="text-[10px] sm:text-xs text-gray-600 font-medium -mt-1">
-                    day streak
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
-        </div>
 
-        {/* Month Selector - Cleaner design */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-orange-100 p-3 sm:p-5 mb-4 sm:mb-8">
-          <div className="flex items-center justify-between max-w-md mx-auto">
-            <button
-              onClick={() => changeMonth('prev')}
-              className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-orange-50 active:bg-orange-100 text-orange-600 transition-all"
-              title="Previous month"
+          {/* Month Selector */}
+          <div className="bg-stone-800/60 backdrop-blur-sm border-4 border-stone-600 rounded-none p-3 mb-4"
+            style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)' }}
+          >
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => changeMonth('prev')}
+                className="p-2 rounded-none bg-stone-700/60 hover:bg-stone-600/60 active:bg-stone-500/60 text-white transition-all border-2 border-stone-500"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              <div className="text-lg font-semibold text-white drop-shadow tracking-wider">
+                {selectedMonthName} {selectedYear}
+              </div>
+
+              <button
+                onClick={() => changeMonth('next')}
+                className="p-2 rounded-none bg-stone-700/60 hover:bg-stone-600/60 active:bg-stone-500/60 text-white transition-all border-2 border-stone-500"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Monthly Heatmaps */}
+          <div className="space-y-4">
+            {/* Michał's Heatmap */}
+            <div className="bg-stone-800/60 backdrop-blur-sm border-4 border-stone-600 rounded-none p-4"
+              style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)' }}
             >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-
-            <div className="text-base sm:text-xl font-semibold text-gray-800">
-              {selectedMonthName} {selectedYear}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🏛️</span>
+                  <h3 className="text-lg font-semibold text-white drop-shadow tracking-wide">MICHAŁ</h3>
+                </div>
+                <div className="text-2xl font-bold text-amber-300 drop-shadow">
+                  {generateMonthHeatmap('person1').filter(d => d.meditated).length}
+                </div>
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {generateMonthHeatmap('person1').map(({ day, meditated }) => (
+                  <div
+                    key={day}
+                    className={`aspect-square rounded-none flex items-center justify-center text-xs font-bold transition-all border-2 ${
+                      meditated
+                        ? 'bg-amber-700 border-amber-500 text-white shadow-lg'
+                        : 'bg-stone-700/40 border-stone-600 text-white/50'
+                    }`}
+                    style={meditated ? { boxShadow: '0 2px 8px rgba(217, 119, 6, 0.4)' } : {}}
+                  >
+                    {day}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <button
-              onClick={() => changeMonth('next')}
-              className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-orange-50 active:bg-orange-100 text-orange-600 transition-all"
-              title="Next month"
+            {/* Magda's Heatmap */}
+            <div className="bg-stone-800/60 backdrop-blur-sm border-4 border-stone-600 rounded-none p-4"
+              style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)' }}
             >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Monthly Heatmaps - Refined cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* Michał's Heatmap */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-orange-100 p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-3 sm:mb-5">
-              <div className="flex items-center gap-1 sm:gap-2">
-                <span className="text-xl sm:text-2xl">🧘‍♂️</span>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-800">Michał</h3>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-                {generateMonthHeatmap('person1').filter(d => d.meditated).length}
-              </div>
-            </div>
-            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-              {generateMonthHeatmap('person1').map(({ day, meditated }) => (
-                <div
-                  key={day}
-                  className={`aspect-square rounded-md sm:rounded-lg flex items-center justify-center text-xs sm:text-sm font-semibold transition-all ${
-                    meditated
-                      ? 'bg-gradient-to-br from-orange-400 to-amber-400 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-400'
-                  }`}
-                  title={`Day ${day}`}
-                >
-                  {day}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🏺</span>
+                  <h3 className="text-lg font-semibold text-white drop-shadow tracking-wide">MAGDA</h3>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Magda's Heatmap */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-purple-100 p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-3 sm:mb-5">
-              <div className="flex items-center gap-1 sm:gap-2">
-                <span className="text-xl sm:text-2xl">🧘‍♀️</span>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-800">Magda</h3>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                {generateMonthHeatmap('person2').filter(d => d.meditated).length}
-              </div>
-            </div>
-            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-              {generateMonthHeatmap('person2').map(({ day, meditated }) => (
-                <div
-                  key={day}
-                  className={`aspect-square rounded-md sm:rounded-lg flex items-center justify-center text-xs sm:text-sm font-semibold transition-all ${
-                    meditated
-                      ? 'bg-gradient-to-br from-purple-400 to-pink-400 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-400'
-                  }`}
-                  title={`Day ${day}`}
-                >
-                  {day}
+                <div className="text-2xl font-bold text-rose-300 drop-shadow">
+                  {generateMonthHeatmap('person2').filter(d => d.meditated).length}
                 </div>
-              ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {generateMonthHeatmap('person2').map(({ day, meditated }) => (
+                  <div
+                    key={day}
+                    className={`aspect-square rounded-none flex items-center justify-center text-xs font-bold transition-all border-2 ${
+                      meditated
+                        ? 'bg-rose-800 border-rose-600 text-white shadow-lg'
+                        : 'bg-stone-700/40 border-stone-600 text-white/50'
+                    }`}
+                    style={meditated ? { boxShadow: '0 2px 8px rgba(190, 18, 60, 0.4)' } : {}}
+                  >
+                    {day}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="mt-8 sm:mt-12 text-center text-xs sm:text-sm text-gray-500 pb-4">
-          <p>Synced in real-time across all devices ✨</p>
+          {/* Footer Quote */}
+          <div className="mt-6 text-center text-xs text-white/80 italic pb-4 drop-shadow">
+            <p>"{randomQuote.text}" — {randomQuote.author}</p>
+          </div>
         </div>
       </div>
     </main>
