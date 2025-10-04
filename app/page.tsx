@@ -168,7 +168,7 @@ export default function Home() {
         <div className="max-w-2xl mx-auto">
 
           {/* Header */}
-          <div className="text-center mb-6 pt-4">
+          <div className="text-center mb-6 pt-12">
             <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 tracking-wide drop-shadow-lg">
               MEDITATIONS
             </h1>
