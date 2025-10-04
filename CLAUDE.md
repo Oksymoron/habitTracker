@@ -84,9 +84,59 @@ const handleSubmit = async (e) => {
 
 ## Development Commands
 
-Project not yet initialized. Once set up, typical commands will be:
+### Development
 ```bash
-npm run dev        # Start development server
-npm run build      # Build for production
-npm run lint       # Run linting
+# Terminal 1: Start Convex dev server (watches convex/ folder)
+npx convex dev
+
+# Terminal 2: Start Next.js dev server
+npm run dev         # http://localhost:3000
 ```
+
+### Production Build
+```bash
+npm run build      # Build Next.js for production
+npm run start      # Start production server
+npm run lint       # Run ESLint
+
+npx convex deploy  # Deploy Convex functions to production
+```
+
+## Project Architecture
+
+### Application Structure
+- **Next.js App Router**: Single-page app in `app/page.tsx` with root layout in `app/layout.tsx`
+- **Convex Backend**: Real-time database functions in `convex/` directory
+- **No API Routes**: All backend logic handled by Convex mutations and queries
+
+### Convex Integration
+- Database schema defined in `convex/schema.ts`
+- Functions in `convex/meditations.ts`:
+  - `getAll`: Query to fetch all meditation entries
+  - `toggleMeditation`: Mutation to toggle meditation status for a person on a date
+- ConvexProvider wraps app in `layout.tsx` to enable real-time data sync
+- Use `useQuery` and `useMutation` hooks in client components
+
+### Data Model
+```typescript
+meditations: {
+  date: string,      // 'YYYY-MM-DD'
+  person1: boolean,  // Michał's meditation status
+  person2: boolean,  // Magda's meditation status
+  _id: Id<"meditations">,
+  _creationTime: number
+}
+```
+- Indexed by date for fast lookups
+- Real-time sync across all connected clients
+
+### Environment Variables
+```
+NEXT_PUBLIC_CONVEX_URL=https://perceptive-zebra-661.convex.cloud
+```
+Set in `.env.local` for development (created by `npx convex dev`)
+
+### PWA Configuration
+- Progressive Web App enabled via `public/manifest.json`
+- iOS-specific meta tags in layout for home screen installation
+- Icons in `public/icons/`
