@@ -114,7 +114,10 @@ export default function Home() {
   const calculateStreak = (person: 'person1' | 'person2') => {
     let streak = 0
     const today = new Date()
-    for (let i = 0; i < 365; i++) {
+
+    // Start counting from yesterday (not today)
+    // This way streak doesn't drop to 0 until you miss a full day
+    for (let i = 1; i < 366; i++) {
       const checkDate = new Date(today)
       checkDate.setDate(today.getDate() - i)
       const dateString = checkDate.toISOString().split('T')[0]
@@ -125,6 +128,14 @@ export default function Home() {
         break
       }
     }
+
+    // If they meditated today, add 1 to the streak
+    const todayString = today.toISOString().split('T')[0]
+    const todayEntry = entries.find(e => e.date === todayString)
+    if (todayEntry && todayEntry[person]) {
+      streak++
+    }
+
     return streak
   }
 
