@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation } from "convex/react"
 import { api } from "../convex/_generated/api"
+import type { Id } from "../convex/_generated/dataModel"
 import HabitView from "./components/HabitView"
 import CreateHabitModal from "./components/CreateHabitModal"
 
@@ -53,7 +54,7 @@ export default function Home() {
   const touchStartX = useRef(0)
   const touchEndX = useRef(0)
   const longPressTimer = useRef<NodeJS.Timeout | null>(null)
-  const [longPressHabitId, setLongPressHabitId] = useState<string | null>(null)
+  const [longPressHabitId, setLongPressHabitId] = useState<Id<"habits"> | null>(null)
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX
@@ -82,7 +83,7 @@ export default function Home() {
   }
 
   // Handle long press on tab (for mobile delete)
-  const handleTabTouchStart = (habitId: string, e: React.TouchEvent) => {
+  const handleTabTouchStart = (habitId: Id<"habits">, e: React.TouchEvent) => {
     // Start long-press timer (800ms)
     longPressTimer.current = setTimeout(() => {
       setLongPressHabitId(habitId)
@@ -98,7 +99,7 @@ export default function Home() {
   }
 
   // Handle deleting a habit
-  const handleDeleteHabit = async (habitId: string, e?: React.MouseEvent) => {
+  const handleDeleteHabit = async (habitId: Id<"habits">, e?: React.MouseEvent) => {
     if (e) e.stopPropagation() // Prevent tab selection when clicking delete
 
     if (!confirm('Are you sure you want to delete this habit? All entries will be lost.')) {
