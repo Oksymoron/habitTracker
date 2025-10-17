@@ -11,6 +11,8 @@ const withPWA = require('next-pwa')({
   reloadOnOnline: true,
   // Don't precache everything (for better update control)
   dynamicStartUrl: true,
+  // IMPORTANT: Clean up old caches automatically
+  cleanupOutdatedCaches: true,
   // Workbox options for custom caching strategies
   runtimeCaching: [
     {
@@ -84,7 +86,7 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // HTML pages - no caching (always check for updates)
+        // HTML pages - NO CACHE (always fetch fresh from server)
         source: '/:path*',
         has: [
           {
@@ -96,7 +98,11 @@ const nextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate'
+            value: 'no-store, must-revalidate'
+          },
+          {
+            key: 'CDN-Cache-Control',
+            value: 'no-store'
           }
         ]
       },
@@ -111,16 +117,30 @@ const nextConfig = {
         ]
       },
       {
-        // Service worker - never cache (must always be fresh)
+        // Service worker - NEVER CACHE (critical for updates)
         source: '/sw.js',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate'
+            value: 'no-store, must-revalidate'
+          },
+          {
+            key: 'CDN-Cache-Control',
+            value: 'no-store'
           },
           {
             key: 'Service-Worker-Allowed',
             value: '/'
+          }
+        ]
+      },
+      {
+        // PWA manifest - short cache with revalidation
+        source: '/manifest.json',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=3600, must-revalidate'
           }
         ]
       }
