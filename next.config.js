@@ -15,7 +15,7 @@ const withPWA = require('next-pwa')({
   runtimeCaching: [
     {
       // HTML pages - NetworkFirst (always try network first for updates)
-      urlPattern: /^https?.*/,
+      urlPattern: ({ request }) => request.mode === 'navigate',
       handler: 'NetworkFirst',
       options: {
         cacheName: 'html-cache',
@@ -51,16 +51,28 @@ const withPWA = require('next-pwa')({
       }
     },
     {
-      // API routes - StaleWhileRevalidate (use cache but update in background)
+      // API routes - NetworkFirst (try network first, fallback to cache)
       urlPattern: /^https?.*\/api\/.*/i,
-      handler: 'StaleWhileRevalidate',
+      handler: 'NetworkFirst',
       options: {
         cacheName: 'api-cache',
         expiration: {
           maxEntries: 32,
           maxAgeSeconds: 24 * 60 * 60 // 24 hours
         },
-        networkTimeoutSeconds: 10
+        networkTimeoutSeconds: 5
+      }
+    },
+    {
+      // Convex API - StaleWhileRevalidate (fast response + background update)
+      urlPattern: /^https?.*convex.*/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'convex-cache',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 60 // 1 hour
+        }
       }
     }
   ]
