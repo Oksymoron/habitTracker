@@ -1,12 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../convex/_generated/api";
+import { useState, useEffect, useRef } from 'react'
+import { useQuery, useMutation } from "convex/react"
+import { api } from "../convex/_generated/api"
+import HabitView from "./components/HabitView"
+import CreateHabitModal from "./components/CreateHabitModal"
 
 export default function Home() {
-  const entries = useQuery(api.meditations.getAll) ?? [];
+  // Fetch all habits from Convex
+  const habits = useQuery(api.habits.getAll) ?? []
 
+  // State for which habit tab is currently active
+  const [activeHabitIndex, setActiveHabitIndex] = useState(0)
+
+  // State for modal visibility
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  // Mutation to initialize default habit (run once on first load)
+  const initializeDefaultHabit = useMutation(api.habits.initializeDefaultHabit)
+
+  // Mutation to delete a habit
+  const deleteHabit = useMutation(api.habits.deleteHabit)
+
+  // PWA: Register service worker on component mount
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
@@ -16,123 +32,106 @@ export default function Home() {
         );
       });
     }
-  }, []);
+  }, [])
 
-  const toggleMeditation = useMutation(api.meditations.toggleMeditation);
+  // Initialize default habit if no habits exist yet
+  // This runs once to migrate old meditation data to new structure
+  useEffect(() => {
+    if (habits.length === 0) {
+      initializeDefaultHabit()
+    }
+  }, [habits.length, initializeDefaultHabit])
 
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-  const [celebrating, setCelebrating] = useState<'person1' | 'person2' | null>(null)
+  // Get entries for the currently active habit
+  const activeHabit = habits[activeHabitIndex]
+  const entries = useQuery(
+    api.habits.getEntries,
+    activeHabit ? { habitId: activeHabit._id } : "skip"
+  ) ?? []
 
-  // Collection of Stoic and Cynic philosophy quotes
-  const quotes = [
-    // Marcus Aurelius - Meditations
-    { text: "You have power over your mind — not outside events. Realize this, and you will find strength.", author: "Marcus Aurelius" },
-    { text: "The impediment to action advances action. What stands in the way becomes the way.", author: "Marcus Aurelius" },
-    { text: "Dwell on the beauty of life. Watch the stars, and see yourself running with them.", author: "Marcus Aurelius" },
-    { text: "Waste no more time arguing about what a good man should be. Be one.", author: "Marcus Aurelius" },
-    { text: "The best revenge is to be unlike him who performed the injury.", author: "Marcus Aurelius" },
-    { text: "Very little is needed to make a happy life; it is all within yourself, in your way of thinking.", author: "Marcus Aurelius" },
-    { text: "If you are distressed by anything external, the pain is not due to the thing itself, but to your estimate of it.", author: "Marcus Aurelius" },
-    { text: "When you arise in the morning, think of what a precious privilege it is to be alive.", author: "Marcus Aurelius" },
-    { text: "Confine yourself to the present.", author: "Marcus Aurelius" },
-    { text: "Everything we hear is an opinion, not a fact. Everything we see is a perspective, not the truth.", author: "Marcus Aurelius" },
+  // Swipe gesture handling
+  const touchStartX = useRef(0)
+  const touchEndX = useRef(0)
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
+  const [longPressHabitId, setLongPressHabitId] = useState<string | null>(null)
 
-    // Seneca - Letters and Essays
-    { text: "We suffer more often in imagination than in reality.", author: "Seneca" },
-    { text: "Luck is what happens when preparation meets opportunity.", author: "Seneca" },
-    { text: "It is not the man who has too little, but the man who craves more, that is poor.", author: "Seneca" },
-    { text: "Difficulties strengthen the mind, as labor does the body.", author: "Seneca" },
-    { text: "As long as you live, keep learning how to live.", author: "Seneca" },
-    { text: "While we wait for life, life passes.", author: "Seneca" },
-    { text: "True happiness is to enjoy the present, without anxious dependence upon the future.", author: "Seneca" },
-    { text: "He who is brave is free.", author: "Seneca" },
-    { text: "Life is long if you know how to use it.", author: "Seneca" },
-    { text: "Begin at once to live, and count each separate day as a separate life.", author: "Seneca" },
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }
 
-    // Diogenes of Sinope - Cynic wisdom
-    { text: "The foundation of every state is the education of its youth.", author: "Diogenes" },
-    { text: "I am a citizen of the world.", author: "Diogenes" },
-    { text: "The sun too penetrates into privies, but is not polluted by them.", author: "Diogenes" },
-    { text: "Why not whip the teacher when the pupil misbehaves?", author: "Diogenes" },
-    { text: "It is the privilege of the gods to want nothing, and of godlike men to want little.", author: "Diogenes" },
-    { text: "I am looking for an honest man.", author: "Diogenes" },
-    { text: "The mob is the mother of tyrants.", author: "Diogenes" },
-    { text: "Dogs and philosophers do the greatest good and get the fewest rewards.", author: "Diogenes" }
-  ]
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX
+  }
 
-  // Select a random quote on component mount (happens once per page load)
-  const [randomQuote] = useState(() => quotes[Math.floor(Math.random() * quotes.length)])
+  const handleTouchEnd = () => {
+    // Calculate swipe distance
+    const swipeDistance = touchStartX.current - touchEndX.current
+    const minSwipeDistance = 50 // Minimum distance to trigger swipe
 
-  const today = new Date().toISOString().split('T')[0]
-  const todayEntry = entries.find(entry => entry.date === today)
+    if (Math.abs(swipeDistance) < minSwipeDistance) return
 
-  const handleMeditation = async (person: 'person1' | 'person2') => {
-    const wasCompleted = todayEntry?.[person]
-    await toggleMeditation({ date: today, person: person });
-    if (!wasCompleted) {
-      setCelebrating(person)
-      setTimeout(() => setCelebrating(null), 1000)
+    // Swipe left = next tab
+    if (swipeDistance > 0 && activeHabitIndex < habits.length - 1) {
+      setActiveHabitIndex(activeHabitIndex + 1)
+    }
+
+    // Swipe right = previous tab
+    if (swipeDistance < 0 && activeHabitIndex > 0) {
+      setActiveHabitIndex(activeHabitIndex - 1)
     }
   }
 
-  const generateMonthHeatmap = (person: 'person1' | 'person2') => {
-    const year = selectedYear
-    const month = selectedMonth
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
-    const days = []
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-      const entry = entries.find(e => e.date === date)
-      days.push({ day, meditated: entry ? entry[person] : false })
-    }
-    return days
+  // Handle long press on tab (for mobile delete)
+  const handleTabTouchStart = (habitId: string, e: React.TouchEvent) => {
+    // Start long-press timer (800ms)
+    longPressTimer.current = setTimeout(() => {
+      setLongPressHabitId(habitId)
+    }, 800)
   }
 
-  const changeMonth = (direction: 'prev' | 'next') => {
-    if (direction === 'prev') {
-      if (selectedMonth === 0) {
-        setSelectedMonth(11)
-        setSelectedYear(selectedYear - 1)
-      } else {
-        setSelectedMonth(selectedMonth - 1)
-      }
-    } else {
-      if (selectedMonth === 11) {
-        setSelectedMonth(0)
-        setSelectedYear(selectedYear + 1)
-      } else {
-        setSelectedMonth(selectedMonth + 1)
-      }
+  const handleTabTouchEnd = () => {
+    // Cancel long-press if touch ends before timer
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
     }
   }
 
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December']
-  const selectedMonthName = monthNames[selectedMonth]
+  // Handle deleting a habit
+  const handleDeleteHabit = async (habitId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation() // Prevent tab selection when clicking delete
 
-  const calculateStreak = (person: 'person1' | 'person2') => {
-    let streak = 0
-    const today = new Date()
-    for (let i = 0; i < 365; i++) {
-      const checkDate = new Date(today)
-      checkDate.setDate(today.getDate() - i)
-      const dateString = checkDate.toISOString().split('T')[0]
-      const entry = entries.find(e => e.date === dateString)
-      if (entry && entry[person]) {
-        streak++
-      } else {
-        break
-      }
+    if (!confirm('Are you sure you want to delete this habit? All entries will be lost.')) {
+      setLongPressHabitId(null)
+      return
     }
-    return streak
+
+    await deleteHabit({ habitId })
+    setLongPressHabitId(null)
+
+    // Adjust active index if needed (if we deleted the active tab)
+    if (activeHabitIndex >= habits.length - 1 && activeHabitIndex > 0) {
+      setActiveHabitIndex(activeHabitIndex - 1)
+    }
   }
 
-  const michalStreak = calculateStreak('person1')
-  const magdaStreak = calculateStreak('person2')
+  // Show loading state while habits are being fetched or initialized
+  if (!activeHabit) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-stone-900">
+        <div className="text-white text-xl">Loading...</div>
+      </main>
+    )
+  }
 
   return (
-    <main className="min-h-screen relative overflow-hidden">
+    <main
+      className="min-h-screen relative overflow-hidden"
+      // Swipe handlers for mobile navigation
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
         body {
@@ -159,229 +158,107 @@ export default function Home() {
       <div className="relative z-10 min-h-screen p-4 pb-20">
         <div className="max-w-2xl mx-auto">
 
-          {/* Header */}
-          <div className="text-center mb-6 pt-4">
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 tracking-wide drop-shadow-lg">
-              MEDITATIONS
-            </h1>
-            <p className="text-xs sm:text-sm text-white/90 italic max-w-md mx-auto leading-relaxed drop-shadow">
-              "{randomQuote.text}"<br className="sm:hidden"/> — {randomQuote.author}
-            </p>
-          </div>
-
-          {/* Today's Practice Cards */}
-          <div className="space-y-4 mb-6">
-            {/* Michał */}
-            <div className="relative">
-              <button
-                onClick={() => handleMeditation('person1')}
-                className={`w-full p-6 rounded-none backdrop-blur-sm border-4 transition-all duration-300 relative overflow-hidden ${
-                  todayEntry?.person1
-                    ? 'bg-amber-800/80 border-amber-600 shadow-2xl'
-                    : 'bg-stone-800/60 border-stone-600 hover:bg-stone-700/60 active:bg-stone-600/60'
-                }`}
-                style={{
-                  boxShadow: todayEntry?.person1 ? '0 8px 32px rgba(217, 119, 6, 0.3), inset 0 2px 4px rgba(255,255,255,0.1)' : '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)'
-                }}
-              >
-                {celebrating === 'person1' && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-6xl animate-ping">⚡</span>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-4xl">🏛️</span>
-                    <div className="text-left">
-                      <div className={`text-2xl font-bold tracking-wide ${
-                        todayEntry?.person1 ? 'text-white' : 'text-white drop-shadow'
-                      }`}>
-                        MICHAŁ
-                      </div>
-                      <div className={`text-xs italic ${
-                        todayEntry?.person1 ? 'text-amber-100' : 'text-white/80'
-                      }`}>
-                        {todayEntry?.person1 ? 'Virtue achieved' : 'Begin practice'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Streak */}
-                  <div className="flex items-center gap-2">
-                    <div className={`text-2xl ${michalStreak > 0 ? '' : 'opacity-40'}`}>🔥</div>
-                    <div className="text-right">
-                      <div className={`text-2xl font-bold ${
-                        todayEntry?.person1 ? 'text-white' : 'text-white drop-shadow'
-                      }`}>
-                        {michalStreak}
-                      </div>
-                      <div className={`text-[9px] uppercase tracking-wide ${
-                        todayEntry?.person1 ? 'text-amber-100' : 'text-white/70'
-                      }`}>
-                        days
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            {/* Magda */}
-            <div className="relative">
-              <button
-                onClick={() => handleMeditation('person2')}
-                className={`w-full p-6 rounded-none backdrop-blur-sm border-4 transition-all duration-300 relative overflow-hidden ${
-                  todayEntry?.person2
-                    ? 'bg-rose-900/80 border-rose-700 shadow-2xl'
-                    : 'bg-stone-800/60 border-stone-600 hover:bg-stone-700/60 active:bg-stone-600/60'
-                }`}
-                style={{
-                  boxShadow: todayEntry?.person2 ? '0 8px 32px rgba(190, 18, 60, 0.3), inset 0 2px 4px rgba(255,255,255,0.1)' : '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)'
-                }}
-              >
-                {celebrating === 'person2' && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-6xl animate-ping">⚡</span>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-4xl">🏺</span>
-                    <div className="text-left">
-                      <div className={`text-2xl font-bold tracking-wide ${
-                        todayEntry?.person2 ? 'text-white' : 'text-white drop-shadow'
-                      }`}>
-                        MAGDA
-                      </div>
-                      <div className={`text-xs italic ${
-                        todayEntry?.person2 ? 'text-rose-100' : 'text-white/80'
-                      }`}>
-                        {todayEntry?.person2 ? 'Virtue achieved' : 'Begin practice'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Streak */}
-                  <div className="flex items-center gap-2">
-                    <div className={`text-2xl ${magdaStreak > 0 ? '' : 'opacity-40'}`}>🔥</div>
-                    <div className="text-right">
-                      <div className={`text-2xl font-bold ${
-                        todayEntry?.person2 ? 'text-white' : 'text-white drop-shadow'
-                      }`}>
-                        {magdaStreak}
-                      </div>
-                      <div className={`text-[9px] uppercase tracking-wide ${
-                        todayEntry?.person2 ? 'text-rose-100' : 'text-white/70'
-                      }`}>
-                        days
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Month Selector */}
-          <div className="bg-stone-800/60 backdrop-blur-sm border-4 border-stone-600 rounded-none p-3 mb-4"
-            style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)' }}
-          >
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => changeMonth('prev')}
-                className="p-2 rounded-none bg-stone-700/60 hover:bg-stone-600/60 active:bg-stone-500/60 text-white transition-all border-2 border-stone-500"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-
-              <div className="text-lg font-semibold text-white drop-shadow tracking-wider">
-                {selectedMonthName} {selectedYear}
-              </div>
-
-              <button
-                onClick={() => changeMonth('next')}
-                className="p-2 rounded-none bg-stone-700/60 hover:bg-stone-600/60 active:bg-stone-500/60 text-white transition-all border-2 border-stone-500"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Monthly Heatmaps */}
-          <div className="space-y-4">
-            {/* Michał's Heatmap */}
-            <div className="bg-stone-800/60 backdrop-blur-sm border-4 border-stone-600 rounded-none p-4"
-              style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)' }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🏛️</span>
-                  <h3 className="text-lg font-semibold text-white drop-shadow tracking-wide">MICHAŁ</h3>
-                </div>
-                <div className="text-2xl font-bold text-amber-300 drop-shadow">
-                  {generateMonthHeatmap('person1').filter(d => d.meditated).length}
-                </div>
-              </div>
-              <div className="grid grid-cols-7 gap-1.5">
-                {generateMonthHeatmap('person1').map(({ day, meditated }) => (
-                  <div
-                    key={day}
-                    className={`aspect-square rounded-none flex items-center justify-center text-xs font-bold transition-all border-2 ${
-                      meditated
+          {/* Tab Navigation */}
+          <div className="mb-4 pt-4">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+              {/* Tab buttons for each habit */}
+              {habits.map((habit, index) => (
+                <div key={habit._id} className="relative">
+                  <button
+                    onClick={() => setActiveHabitIndex(index)}
+                    onTouchStart={(e) => handleTabTouchStart(habit._id, e)}
+                    onTouchEnd={handleTabTouchEnd}
+                    onTouchMove={handleTabTouchEnd}
+                    className={`flex items-center gap-2 px-4 py-2 border-2 transition-all whitespace-nowrap relative group ${
+                      index === activeHabitIndex
                         ? 'bg-amber-700 border-amber-500 text-white shadow-lg'
-                        : 'bg-stone-700/40 border-stone-600 text-white/50'
-                    }`}
-                    style={meditated ? { boxShadow: '0 2px 8px rgba(217, 119, 6, 0.4)' } : {}}
+                        : 'bg-stone-800/60 border-stone-600 text-white/70 hover:bg-stone-700/60'
+                    } ${longPressHabitId === habit._id ? 'animate-pulse' : ''}`}
+                    style={index === activeHabitIndex ? { boxShadow: '0 4px 12px rgba(217, 119, 6, 0.4)' } : {}}
                   >
-                    {day}
-                  </div>
-                ))}
-              </div>
+                    <span className="text-xl">{habit.icon}</span>
+                    <span className="font-semibold tracking-wide">{habit.name.toUpperCase()}</span>
+
+                    {/* Delete button (desktop hover only - only show if there's more than 1 habit) */}
+                    {habits.length > 1 && (
+                      <button
+                        onClick={(e) => handleDeleteHabit(habit._id, e)}
+                        className="ml-1 w-5 h-5 flex items-center justify-center rounded-full bg-red-600/80 hover:bg-red-500 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex"
+                        title="Delete habit"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </button>
+
+                </div>
+              ))}
+
+              {/* Add new habit button */}
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-stone-800/60 border-2 border-stone-600 text-white/70 hover:bg-stone-700/60 hover:text-white transition-all whitespace-nowrap"
+              >
+                <span className="text-xl">+</span>
+                <span className="font-semibold tracking-wide">NEW</span>
+              </button>
             </div>
 
-            {/* Magda's Heatmap */}
-            <div className="bg-stone-800/60 backdrop-blur-sm border-4 border-stone-600 rounded-none p-4"
-              style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)' }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🏺</span>
-                  <h3 className="text-lg font-semibold text-white drop-shadow tracking-wide">MAGDA</h3>
-                </div>
-                <div className="text-2xl font-bold text-rose-300 drop-shadow">
-                  {generateMonthHeatmap('person2').filter(d => d.meditated).length}
-                </div>
-              </div>
-              <div className="grid grid-cols-7 gap-1.5">
-                {generateMonthHeatmap('person2').map(({ day, meditated }) => (
-                  <div
-                    key={day}
-                    className={`aspect-square rounded-none flex items-center justify-center text-xs font-bold transition-all border-2 ${
-                      meditated
-                        ? 'bg-rose-800 border-rose-600 text-white shadow-lg'
-                        : 'bg-stone-700/40 border-stone-600 text-white/50'
-                    }`}
-                    style={meditated ? { boxShadow: '0 2px 8px rgba(190, 18, 60, 0.4)' } : {}}
-                  >
-                    {day}
-                  </div>
-                ))}
-              </div>
+            {/* Swipe hint indicator (dots) */}
+            <div className="flex items-center justify-center gap-1.5 mt-3">
+              {habits.map((_, index) => (
+                <div
+                  key={index}
+                  className={`h-1.5 rounded-full transition-all ${
+                    index === activeHabitIndex
+                      ? 'w-6 bg-amber-500'
+                      : 'w-1.5 bg-white/30'
+                  }`}
+                />
+              ))}
             </div>
           </div>
 
-          {/* Footer Quote */}
-          <div className="mt-6 text-center text-xs text-white/80 italic pb-4 drop-shadow">
-            <p>"{randomQuote.text}" — {randomQuote.author}</p>
-          </div>
+          {/* Render the active habit view */}
+          <HabitView habit={activeHabit} entries={entries} />
         </div>
       </div>
+
+      {/* Create Habit Modal */}
+      <CreateHabitModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
+
+      {/* Delete Confirmation Popup (Mobile) */}
+      {longPressHabitId && habits.length > 1 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-stone-900 border-4 border-red-600 rounded-none p-6 max-w-sm w-full"
+            style={{ boxShadow: '0 8px 32px rgba(220, 38, 38, 0.6)' }}
+          >
+            <h3 className="text-xl font-bold text-white mb-4 text-center tracking-wide">
+              DELETE HABIT?
+            </h3>
+            <p className="text-white/80 text-center mb-6">
+              Are you sure? All entries will be lost.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setLongPressHabitId(null)}
+                className="flex-1 px-4 py-3 bg-stone-700 hover:bg-stone-600 text-white font-semibold border-2 border-stone-500 transition-all"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={() => handleDeleteHabit(longPressHabitId)}
+                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold border-2 border-red-500 transition-all"
+              >
+                DELETE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
