@@ -17,23 +17,93 @@ export default function Home() {
   // State for modal visibility
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  // State for PWA update notification
+  const [showUpdateBanner, setShowUpdateBanner] = useState(false)
+  const [waitingServiceWorker, setWaitingServiceWorker] = useState<ServiceWorker | null>(null)
+
   // Mutation to initialize default habit (run once on first load)
   const initializeDefaultHabit = useMutation(api.habits.initializeDefaultHabit)
 
   // Mutation to delete a habit
   const deleteHabit = useMutation(api.habits.deleteHabit)
 
-  // PWA: Register service worker on component mount
+  // PWA: Register service worker and handle updates
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js").then(
-          (registration) => console.log("[PWA] Service Worker registered:", registration),
-          (error) => console.log("[PWA] Service Worker registration failed:", error)
-        );
+      // Register service worker
+      navigator.serviceWorker.register("/sw.js").then(
+        (registration) => {
+          console.log("[PWA] Service Worker registered:", registration);
+
+          // Check for updates every 60 seconds (when app is active)
+          const interval = setInterval(() => {
+            registration.update();
+          }, 60000);
+
+          // Check for waiting service worker on load
+          if (registration.waiting) {
+            console.log("[PWA] New service worker is waiting");
+            setWaitingServiceWorker(registration.waiting);
+            setShowUpdateBanner(true);
+          }
+
+          // Listen for updates
+          registration.addEventListener("updatefound", () => {
+            const newWorker = registration.installing;
+            console.log("[PWA] New service worker found");
+
+            if (newWorker) {
+              newWorker.addEventListener("statechange", () => {
+                console.log("[PWA] New SW state:", newWorker.state);
+
+                // When new SW is installed and waiting
+                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                  console.log("[PWA] New service worker installed, showing update banner");
+                  setWaitingServiceWorker(newWorker);
+                  setShowUpdateBanner(true);
+                }
+              });
+            }
+          });
+
+          return () => clearInterval(interval);
+        },
+        (error) => console.log("[PWA] Service Worker registration failed:", error)
+      );
+
+      // Listen for messages from service worker
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data && event.data.type === "SW_UPDATED") {
+          console.log("[PWA] Received SW_UPDATED message");
+          setShowUpdateBanner(true);
+        }
+      });
+
+      // Reload page when controlled by new service worker
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!refreshing) {
+          console.log("[PWA] Controller changed, reloading page");
+          refreshing = true;
+          window.location.reload();
+        }
       });
     }
   }, [])
+
+  // Handle update button click
+  const handleUpdate = () => {
+    console.log("[PWA] User clicked update button");
+
+    if (waitingServiceWorker) {
+      // Tell the waiting SW to skip waiting and activate
+      waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
+      setShowUpdateBanner(false);
+    } else {
+      // Fallback: just reload
+      window.location.reload();
+    }
+  }
 
   // Initialize default habit if no habits exist yet
   // This runs once to migrate old meditation data to new structure
@@ -255,6 +325,31 @@ export default function Home() {
                 className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold border-2 border-red-500 transition-all"
               >
                 DELETE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PWA Update Banner */}
+      {showUpdateBanner && (
+        <div className="fixed bottom-4 left-4 right-4 z-50 animate-slide-up">
+          <div className="bg-amber-700 border-4 border-amber-500 rounded-none p-4 max-w-md mx-auto"
+            style={{ boxShadow: '0 8px 32px rgba(217, 119, 6, 0.6)' }}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">⚡</span>
+                <div>
+                  <div className="text-white font-bold tracking-wide">NOWA WERSJA</div>
+                  <div className="text-amber-100 text-sm">Odśwież aby zobaczyć zmiany</div>
+                </div>
+              </div>
+              <button
+                onClick={handleUpdate}
+                className="px-4 py-2 bg-white hover:bg-amber-50 text-amber-900 font-bold border-2 border-amber-900 transition-all whitespace-nowrap"
+              >
+                ODŚWIEŻ
               </button>
             </div>
           </div>

@@ -1,0 +1,238 @@
+            backgroundImage: 'url(/images/athens-background.png)',
+            backgroundPosition: 'center 30%'
+          }}
+        ></div>
+        {/* Dark overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/50"></div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 min-h-screen p-4 pb-20">
+        <div className="max-w-2xl mx-auto">
+
+          {/* Header */}
+          <div className="text-center mb-6 pt-4">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 tracking-wide drop-shadow-lg">
+              MEDITATIONS
+            </h1>
+            <p className="text-xs sm:text-sm text-white/90 italic max-w-md mx-auto leading-relaxed drop-shadow">
+              "{randomQuote.text}"<br className="sm:hidden"/> — {randomQuote.author}
+            </p>
+          </div>
+
+          {/* Today's Practice Cards */}
+          <div className="space-y-4 mb-6">
+            {/* Michał */}
+            <div className="relative">
+              <button
+                onClick={() => handleMeditation('person1')}
+                className={`w-full p-6 rounded-none backdrop-blur-sm border-4 transition-all duration-300 relative overflow-hidden ${
+                  todayEntry?.person1
+                    ? 'bg-amber-800/80 border-amber-600 shadow-2xl'
+                    : 'bg-stone-800/60 border-stone-600 hover:bg-stone-700/60 active:bg-stone-600/60'
+                }`}
+                style={{
+                  boxShadow: todayEntry?.person1 ? '0 8px 32px rgba(217, 119, 6, 0.3), inset 0 2px 4px rgba(255,255,255,0.1)' : '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)'
+                }}
+              >
+                {celebrating === 'person1' && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="text-6xl animate-ping">⚡</span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-4xl">🏛️</span>
+                    <div className="text-left">
+                      <div className={`text-2xl font-bold tracking-wide ${
+                        todayEntry?.person1 ? 'text-white' : 'text-white drop-shadow'
+                      }`}>
+                        MICHAŁ
+                      </div>
+                      <div className={`text-xs italic ${
+                        todayEntry?.person1 ? 'text-amber-100' : 'text-white/80'
+                      }`}>
+                        {todayEntry?.person1 ? 'Virtue achieved' : 'Begin practice'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Streak */}
+                  <div className="flex items-center gap-2">
+                    <div className={`text-2xl ${michalStreak > 0 ? '' : 'opacity-40'}`}>🔥</div>
+                    <div className="text-right">
+                      <div className={`text-2xl font-bold ${
+                        todayEntry?.person1 ? 'text-white' : 'text-white drop-shadow'
+                      }`}>
+                        {michalStreak}
+                      </div>
+                      <div className={`text-[9px] uppercase tracking-wide ${
+                        todayEntry?.person1 ? 'text-amber-100' : 'text-white/70'
+                      }`}>
+                        days
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Magda */}
+            <div className="relative">
+              <button
+                onClick={() => handleMeditation('person2')}
+                className={`w-full p-6 rounded-none backdrop-blur-sm border-4 transition-all duration-300 relative overflow-hidden ${
+                  todayEntry?.person2
+                    ? 'bg-rose-900/80 border-rose-700 shadow-2xl'
+                    : 'bg-stone-800/60 border-stone-600 hover:bg-stone-700/60 active:bg-stone-600/60'
+                }`}
+                style={{
+                  boxShadow: todayEntry?.person2 ? '0 8px 32px rgba(190, 18, 60, 0.3), inset 0 2px 4px rgba(255,255,255,0.1)' : '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)'
+                }}
+              >
+                {celebrating === 'person2' && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="text-6xl animate-ping">⚡</span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-4xl">🏺</span>
+                    <div className="text-left">
+                      <div className={`text-2xl font-bold tracking-wide ${
+                        todayEntry?.person2 ? 'text-white' : 'text-white drop-shadow'
+                      }`}>
+                        MAGDA
+                      </div>
+                      <div className={`text-xs italic ${
+                        todayEntry?.person2 ? 'text-rose-100' : 'text-white/80'
+                      }`}>
+                        {todayEntry?.person2 ? 'Virtue achieved' : 'Begin practice'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Streak */}
+                  <div className="flex items-center gap-2">
+                    <div className={`text-2xl ${magdaStreak > 0 ? '' : 'opacity-40'}`}>🔥</div>
+                    <div className="text-right">
+                      <div className={`text-2xl font-bold ${
+                        todayEntry?.person2 ? 'text-white' : 'text-white drop-shadow'
+                      }`}>
+                        {magdaStreak}
+                      </div>
+                      <div className={`text-[9px] uppercase tracking-wide ${
+                        todayEntry?.person2 ? 'text-rose-100' : 'text-white/70'
+                      }`}>
+                        days
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Month Selector */}
+          <div className="bg-stone-800/60 backdrop-blur-sm border-4 border-stone-600 rounded-none p-3 mb-4"
+            style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)' }}
+          >
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => changeMonth('prev')}
+                className="p-2 rounded-none bg-stone-700/60 hover:bg-stone-600/60 active:bg-stone-500/60 text-white transition-all border-2 border-stone-500"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              <div className="text-lg font-semibold text-white drop-shadow tracking-wider">
+                {selectedMonthName} {selectedYear}
+              </div>
+
+              <button
+                onClick={() => changeMonth('next')}
+                className="p-2 rounded-none bg-stone-700/60 hover:bg-stone-600/60 active:bg-stone-500/60 text-white transition-all border-2 border-stone-500"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Monthly Heatmaps */}
+          <div className="space-y-4">
+            {/* Michał's Heatmap */}
+            <div className="bg-stone-800/60 backdrop-blur-sm border-4 border-stone-600 rounded-none p-4"
+              style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)' }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🏛️</span>
+                  <h3 className="text-lg font-semibold text-white drop-shadow tracking-wide">MICHAŁ</h3>
+                </div>
+                <div className="text-2xl font-bold text-amber-300 drop-shadow">
+                  {generateMonthHeatmap('person1').filter(d => d.meditated).length}
+                </div>
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {generateMonthHeatmap('person1').map(({ day, meditated }) => (
+                  <div
+                    key={day}
+                    className={`aspect-square rounded-none flex items-center justify-center text-xs font-bold transition-all border-2 ${
+                      meditated
+                        ? 'bg-amber-700 border-amber-500 text-white shadow-lg'
+                        : 'bg-stone-700/40 border-stone-600 text-white/50'
+                    }`}
+                    style={meditated ? { boxShadow: '0 2px 8px rgba(217, 119, 6, 0.4)' } : {}}
+                  >
+                    {day}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Magda's Heatmap */}
+            <div className="bg-stone-800/60 backdrop-blur-sm border-4 border-stone-600 rounded-none p-4"
+              style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.05)' }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🏺</span>
+                  <h3 className="text-lg font-semibold text-white drop-shadow tracking-wide">MAGDA</h3>
+                </div>
+                <div className="text-2xl font-bold text-rose-300 drop-shadow">
+                  {generateMonthHeatmap('person2').filter(d => d.meditated).length}
+                </div>
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {generateMonthHeatmap('person2').map(({ day, meditated }) => (
+                  <div
+                    key={day}
+                    className={`aspect-square rounded-none flex items-center justify-center text-xs font-bold transition-all border-2 ${
+                      meditated
+                        ? 'bg-rose-800 border-rose-600 text-white shadow-lg'
+                        : 'bg-stone-700/40 border-stone-600 text-white/50'
+                    }`}
+                    style={meditated ? { boxShadow: '0 2px 8px rgba(190, 18, 60, 0.4)' } : {}}
+                  >
+                    {day}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Quote */}
+          <div className="mt-6 text-center text-xs text-white/80 italic pb-4 drop-shadow">
+            <p>"{randomQuote.text}" — {randomQuote.author}</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  )
+}
