@@ -103,13 +103,9 @@ const nextConfig = {
           {
             key: 'CDN-Cache-Control',
             value: 'no-store'
-          },
-          // TEMPORARY: Clear-Site-Data for 48h to kill old SW
-          // Remove this after 2 days when users have fresh SW
-          {
-            key: 'Clear-Site-Data',
-            value: '"cache", "storage"'
           }
+          // REMOVED: Clear-Site-Data causes CSS to fail loading (MIME type issue)
+          // Alternative: Users manually unregister SW or it updates via skipWaiting
         ]
       },
       {
