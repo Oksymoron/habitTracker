@@ -21,18 +21,19 @@ self.addEventListener('activate', (event) => {
       // This includes already-open tabs/windows
       await self.clients.claim()
 
-      // Clean up old caches (next-pwa does this automatically, but we can add custom logic)
+      // AGGRESSIVE: Delete ALL caches on activate (nuclear option for migration)
+      // This ensures old cache doesn't interfere with new SW
       const cacheNames = await caches.keys()
-      const oldCaches = cacheNames.filter(name =>
-        name.startsWith('workbox-') && !name.includes('precache')
-      )
+      console.log('[SW] Found', cacheNames.length, 'caches to delete')
 
       await Promise.all(
-        oldCaches.map(cacheName => {
-          console.log('[SW] Deleting old cache:', cacheName)
+        cacheNames.map(cacheName => {
+          console.log('[SW] Deleting cache:', cacheName)
           return caches.delete(cacheName)
         })
       )
+
+      console.log('[SW] All old caches deleted')
 
       // Notify all clients that new SW is active
       const clients = await self.clients.matchAll({ type: 'window' })

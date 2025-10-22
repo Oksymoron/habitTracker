@@ -5,6 +5,8 @@ const withPWA = require('next-pwa')({
   // Register service worker immediately (skipWaiting + clientsClaim)
   register: true,
   skipWaiting: true,
+  // CRITICAL for iOS: new SW takes control immediately
+  // Note: next-pwa doesn't have clientsClaim option, we handle it in sw.js
   // Custom service worker for advanced caching
   sw: 'sw.js',
   // Ensure service worker updates properly
@@ -82,32 +84,36 @@ const withPWA = require('next-pwa')({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Production-only headers for proper caching
+  // AGGRESSIVE CACHE HEADERS - Force fresh content always
   async headers() {
     return [
       {
-        // HTML pages - NO CACHE (always fetch fresh from server)
-        source: '/:path*',
-        has: [
-          {
-            type: 'header',
-            key: 'accept',
-            value: '.*text/html.*'
-          }
-        ],
+        // HTML + ALL PAGES - ZERO CACHE (always fetch from server)
+        // Excludes: _next/static, favicon, robots, sitemap
+        source: '/:path((?!_next/static/|_next/image/|favicon\\.ico|robots\\.txt|sitemap\\.xml).*)',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'no-store, must-revalidate'
+            value: 'no-store'
+          },
+          {
+            key: 'Vercel-CDN-Cache-Control',
+            value: 'no-store'
           },
           {
             key: 'CDN-Cache-Control',
             value: 'no-store'
+          },
+          // TEMPORARY: Clear-Site-Data for 48h to kill old SW
+          // Remove this after 2 days when users have fresh SW
+          {
+            key: 'Clear-Site-Data',
+            value: '"cache", "storage"'
           }
         ]
       },
       {
-        // Static assets with hash - cache forever
+        // Static assets with fingerprint - cache forever (immutable)
         source: '/_next/static/:path*',
         headers: [
           {
@@ -117,12 +123,16 @@ const nextConfig = {
         ]
       },
       {
-        // Service worker - NEVER CACHE (critical for updates)
+        // Service Worker - NEVER CACHE (critical)
         source: '/sw.js',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'no-store, must-revalidate'
+            value: 'no-store'
+          },
+          {
+            key: 'Vercel-CDN-Cache-Control',
+            value: 'no-store'
           },
           {
             key: 'CDN-Cache-Control',
@@ -135,12 +145,26 @@ const nextConfig = {
         ]
       },
       {
-        // PWA manifest - short cache with revalidation
-        source: '/manifest.json',
+        // Workbox generated files - never cache
+        source: '/workbox-:hash.js',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=3600, must-revalidate'
+            value: 'no-store'
+          }
+        ]
+      },
+      {
+        // Version.json - always fresh (for auto-reload check)
+        source: '/version.json',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store'
+          },
+          {
+            key: 'Vercel-CDN-Cache-Control',
+            value: 'no-store'
           }
         ]
       }

@@ -1,11 +1,19 @@
 'use client' // Needed for Convex provider
 
 import './globals.css'
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexProvider, ConvexReactClient } from "convex/react"
+import { useVersionCheck } from '@/hooks/useVersionCheck'
 
 // Initialize Convex client
 // The NEXT_PUBLIC_CONVEX_URL will be set after running `npx convex dev`
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+
+function VersionCheckWrapper({ children }: { children: React.ReactNode }) {
+  // Auto-reload when new version is deployed (checks every 60s)
+  useVersionCheck(60000)
+
+  return <>{children}</>
+}
 
 export default function RootLayout({
   children,
@@ -31,7 +39,9 @@ export default function RootLayout({
       <body>
         {/* ConvexProvider wraps the app to give access to Convex database */}
         <ConvexProvider client={convex}>
-          {children}
+          <VersionCheckWrapper>
+            {children}
+          </VersionCheckWrapper>
         </ConvexProvider>
       </body>
     </html>
