@@ -15,6 +15,8 @@ const withPWA = require('next-pwa')({
   dynamicStartUrl: true,
   // IMPORTANT: Clean up old caches automatically
   cleanupOutdatedCaches: true,
+  // Fix for Next.js 15: Exclude build manifests from precaching
+  buildExcludes: [/app-build-manifest\.json$/, /middleware-manifest\.json$/],
   // Workbox options for custom caching strategies
   runtimeCaching: [
     {
