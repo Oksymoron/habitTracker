@@ -39,37 +39,9 @@ export default function Home() {
     activeHabit ? { habitId: activeHabit._id } : "skip"
   ) ?? []
 
-  // Swipe gesture handling
-  const touchStartX = useRef(0)
-  const touchEndX = useRef(0)
+  // Long-press handling for mobile delete
   const longPressTimer = useRef<NodeJS.Timeout | null>(null)
   const [longPressHabitId, setLongPressHabitId] = useState<Id<"habits"> | null>(null)
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX
-  }
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    touchEndX.current = e.touches[0].clientX
-  }
-
-  const handleTouchEnd = () => {
-    // Calculate swipe distance
-    const swipeDistance = touchStartX.current - touchEndX.current
-    const minSwipeDistance = 50 // Minimum distance to trigger swipe
-
-    if (Math.abs(swipeDistance) < minSwipeDistance) return
-
-    // Swipe left = next tab
-    if (swipeDistance > 0 && activeHabitIndex < habits.length - 1) {
-      setActiveHabitIndex(activeHabitIndex + 1)
-    }
-
-    // Swipe right = previous tab
-    if (swipeDistance < 0 && activeHabitIndex > 0) {
-      setActiveHabitIndex(activeHabitIndex - 1)
-    }
-  }
 
   // Handle long press on tab (for mobile delete)
   const handleTabTouchStart = (habitId: Id<"habits">, e: React.TouchEvent) => {
@@ -115,13 +87,7 @@ export default function Home() {
   }
 
   return (
-    <main
-      className="min-h-screen relative overflow-hidden"
-      // Swipe handlers for mobile navigation
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+    <main className="min-h-screen relative overflow-hidden">
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
         body {
@@ -192,20 +158,6 @@ export default function Home() {
                 <span className="text-xl">+</span>
                 <span className="font-semibold tracking-wide">NEW</span>
               </button>
-            </div>
-
-            {/* Swipe hint indicator (dots) */}
-            <div className="flex items-center justify-center gap-1.5 mt-3">
-              {habits.map((_, index) => (
-                <div
-                  key={index}
-                  className={`h-1.5 rounded-full transition-all ${
-                    index === activeHabitIndex
-                      ? 'w-6 bg-amber-500'
-                      : 'w-1.5 bg-white/30'
-                  }`}
-                />
-              ))}
             </div>
           </div>
 
